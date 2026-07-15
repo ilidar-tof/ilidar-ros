@@ -1,0 +1,6 @@
+<launch>
+  <arg name="config" default="$(find ilidar_itfs_ros)/config/itfs.yaml"/>
+  <node pkg="ilidar_itfs_ros" type="ilidar_core" name="ilidar_core" output="screen">
+    <rosparam command="load" file="$(arg config)"/>
+  </node>
+</launch>

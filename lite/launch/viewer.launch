@@ -1,0 +1,17 @@
+<launch>
+  <arg name="sensor_sns" default=""/>
+  <arg name="fixed_frame" default="base_link"/>
+  <arg name="config" default="$(find ilidar_lite_ros)/config/lite.yaml"/>
+
+  <include file="$(find ilidar_lite_ros)/launch/lite.launch">
+    <arg name="config" value="$(arg config)"/>
+  </include>
+
+  <!-- The helper creates one RViz group per SN and then starts one RViz process. -->
+  <node pkg="ilidar_lite_ros" type="ilidar_lite_viewer"
+        name="ilidar_lite_viewer" output="screen" required="true">
+    <param name="sensor_sns" value="$(arg sensor_sns)"/>
+    <param name="fixed_frame" value="$(arg fixed_frame)"/>
+    <param name="rviz_template" value="$(find ilidar_lite_ros)/rviz/lite.rviz"/>
+  </node>
+</launch>

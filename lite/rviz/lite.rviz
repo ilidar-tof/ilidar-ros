@@ -1,0 +1,84 @@
+# The viewer launch treats the named sensor displays below as templates and
+# rewrites their topics into one group for each requested serial number.
+Panels:
+  - Class: rviz/Displays
+    Name: Displays
+  - Class: rviz/Views
+    Name: Views
+Visualization Manager:
+  Class: ""
+  Displays:
+    - Class: rviz/Grid
+      Enabled: true
+      Name: Grid
+      Plane: XY
+      Value: true
+    - Class: rviz/TF
+      Enabled: true
+      Name: TF
+      Show Axes: true
+      Show Names: true
+      Value: true
+    - Class: rviz/PointCloud2
+      Enabled: true
+      Name: LITE Points
+      Topic: /ilidar_lite/points
+      Style: Points
+      Size (Pixels): 3
+      Color Transformer: FlatColor
+      Color: 255; 255; 255
+      Position Transformer: XYZ
+      Queue Size: 5
+      Value: true
+    - Class: rviz/Camera
+      Enabled: true
+      Name: Depth Camera
+      Image Topic: /ilidar_lite/depth/image_raw
+      Image Rendering: background
+      Overlay Alpha: 0.5
+      Queue Size: 2
+      Transport Hint: raw
+      Zoom Factor: 1
+      Value: true
+    - Class: rviz/Image
+      Enabled: true
+      Name: Amplitude Image
+      Image Topic: /ilidar_lite/amplitude/image_raw
+      Transport Hint: raw
+      Value: true
+    - Class: rviz/Image
+      Enabled: true
+      Name: Intensity Image
+      Image Topic: /ilidar_lite/intensity/image_raw
+      Transport Hint: raw
+      Value: true
+    - Class: rviz/Image
+      Enabled: true
+      Name: Confidence Image
+      Image Topic: /ilidar_lite/confidence/image_raw
+      Transport Hint: raw
+      Value: true
+  Enabled: true
+  Global Options:
+    Background Color: 0; 0; 0
+    Fixed Frame: base_link
+    Frame Rate: 30
+  Name: root
+  Tools:
+    - Class: rviz/Interact
+    - Class: rviz/MoveCamera
+    - Class: rviz/Select
+  Views:
+    Current:
+      Class: rviz/Orbit
+      Distance: 6
+      Focal Point:
+        X: 0
+        Y: 0
+        Z: 0
+      Pitch: 0.5
+      Target Frame: base_link
+      Yaw: 0.8
+Window Geometry:
+  Height: 900
+  Width: 1400

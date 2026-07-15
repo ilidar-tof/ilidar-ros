@@ -1,0 +1,26 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>ilidar_lite_ros</name>
+  <version>2.0.0</version>
+  <description>ROS1 C++ wrapper for the iTFS-LITE API.</description>
+
+  <maintainer email="json@hybo.co">Junwoo Son</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <depend>diagnostic_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>roscpp</depend>
+  <depend>sensor_msgs</depend>
+  <depend>std_msgs</depend>
+  <depend>tf2</depend>
+  <depend>tf2_ros</depend>
+
+  <exec_depend>rviz</exec_depend>
+  <!-- The generic rosdep key selects Python 2 on Kinetic/Melodic and Python 3 on Noetic. -->
+  <exec_depend>python-yaml</exec_depend>
+  <exec_depend>rospy</exec_depend>
+
+  <export/>
+</package>

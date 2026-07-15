@@ -1,0 +1,14 @@
+<launch>
+  <arg name="sensor_sns" default=""/>
+  <arg name="fixed_frame" default="base_link"/>
+  <arg name="config" default="$(find ilidar_itfs_ros)/config/itfs.yaml"/>
+  <include file="$(find ilidar_itfs_ros)/launch/itfs.launch">
+    <arg name="config" value="$(arg config)"/>
+  </include>
+  <node pkg="ilidar_itfs_ros" type="ilidar_viewer" name="ilidar_viewer"
+        output="screen" required="true">
+    <param name="sensor_sns" value="$(arg sensor_sns)"/>
+    <param name="fixed_frame" value="$(arg fixed_frame)"/>
+    <param name="rviz_template" value="$(find ilidar_itfs_ros)/rviz/itfs.rviz"/>
+  </node>
+</launch>

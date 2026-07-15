@@ -1,0 +1,187 @@
+#!/usr/bin/env python
+
+"""Discover optional iTFS serial numbers and supervise one RViz process."""
+
+from __future__ import print_function
+
+import copy
+from distutils.spawn import find_executable
+import io
+import os
+import re
+import signal
+import subprocess
+import tempfile
+import time
+
+import rospy
+import yaml
+
+
+SENSOR_TOPIC_SUFFIXES = {
+    "iTFS Points": ("Topic", "points"),
+    "Depth Image": ("Image Topic", "depth/image_raw"),
+    "Intensity Image": ("Image Topic", "intensity/image_raw"),
+}
+INFO_TOPIC_PATTERN = re.compile(r"^/ilidar_(\d+)/info$")
+DISCOVERY_SETTLE_SEC = 1.0
+PROCESS_STOP_TIMEOUT_SEC = 5.0
+monotonic_time = getattr(time, "monotonic", time.time)
+
+
+def parse_sensor_sns(text):
+    """Parse a delimited decimal SN list while preserving input order."""
+    tokens = [token for token in re.split(r"[\s,;]+", text.strip()) if token]
+    if not tokens:
+        raise ValueError("sensor_sns must contain at least one sensor serial number")
+
+    sensor_sns = []
+    seen = set()
+    for token in tokens:
+        if not token.isdigit():
+            raise ValueError("invalid sensor serial number: {!r}".format(token))
+        sensor_sn = int(token)
+        if sensor_sn < 0 or sensor_sn >= 0xFFFF:
+            raise ValueError("sensor serial number out of range: {}".format(sensor_sn))
+        if sensor_sn not in seen:
+            seen.add(sensor_sn)
+            sensor_sns.append(sensor_sn)
+    return sensor_sns
+
+
+def discover_sensor_sns():
+    """Collect every advertised SN, then return after the graph settles."""
+    last_change_at = None
+    discovered = set()
+    rospy.loginfo("sensor_sns was omitted; discovering iTFS sensors")
+
+    while not rospy.is_shutdown():
+        current = set()
+        for topic_name, _ in rospy.get_published_topics():
+            match = INFO_TOPIC_PATTERN.match(topic_name)
+            if match:
+                current.add(int(match.group(1)))
+
+        if current != discovered:
+            discovered = current
+            last_change_at = monotonic_time()
+            rospy.loginfo(
+                "discovered sensor SNs: %s",
+                ", ".join(str(sensor_sn) for sensor_sn in sorted(discovered)))
+
+        now = monotonic_time()
+        if discovered and now - last_change_at >= DISCOVERY_SETTLE_SEC:
+            return sorted(discovered)
+        # Wall time keeps viewer discovery responsive when /use_sim_time is set
+        # but no /clock publisher exists.
+        time.sleep(0.1)
+
+    raise RuntimeError("ROS shutdown while discovering iTFS sensors")
+
+
+def build_rviz_config(template_path, sensor_sns, fixed_frame):
+    """Clone the sensor display templates into one group per SN."""
+    with io.open(template_path, "r", encoding="utf-8") as stream:
+        config = yaml.safe_load(stream)
+
+    manager = config["Visualization Manager"]
+    source_displays = manager["Displays"]
+    sensor_templates = {
+        display.get("Name"): display
+        for display in source_displays
+        if display.get("Name") in SENSOR_TOPIC_SUFFIXES
+    }
+    missing = set(SENSOR_TOPIC_SUFFIXES) - set(sensor_templates)
+    if missing:
+        raise ValueError("RViz template is missing displays: {}".format(sorted(missing)))
+
+    # Grid and TF remain global; sensor displays are cloned into one group per SN.
+    manager["Displays"] = [
+        display
+        for display in source_displays
+        if display.get("Name") not in SENSOR_TOPIC_SUFFIXES
+    ]
+    manager["Global Options"]["Fixed Frame"] = fixed_frame
+    manager["Views"]["Current"]["Target Frame"] = fixed_frame
+
+    for sensor_sn in sensor_sns:
+        topic_prefix = "/ilidar_{}".format(sensor_sn)
+        displays = []
+        for name, (topic_property, suffix) in SENSOR_TOPIC_SUFFIXES.items():
+            display = copy.deepcopy(sensor_templates[name])
+            display[topic_property] = "{}/{}".format(topic_prefix, suffix)
+            displays.append(display)
+        manager["Displays"].append(
+            {
+                "Class": "rviz/Group",
+                "Displays": displays,
+                "Enabled": True,
+                "Name": "ilidar_{}".format(sensor_sn),
+            }
+        )
+    return config
+
+
+def wait_for_process(process, timeout_sec):
+    """Wait with Python 2/3-compatible wall time and report completion."""
+    deadline = monotonic_time() + timeout_sec
+    while process.poll() is None and monotonic_time() < deadline:
+        time.sleep(0.1)
+    return process.poll() is not None
+
+
+def stop_process(process):
+    """Escalate RViz shutdown without allowing launch teardown to hang."""
+    if process is None or process.poll() is not None:
+        return
+    process.send_signal(signal.SIGINT)
+    if wait_for_process(process, PROCESS_STOP_TIMEOUT_SEC):
+        return
+    process.terminate()
+    if wait_for_process(process, PROCESS_STOP_TIMEOUT_SEC):
+        return
+    process.kill()
+    process.wait()
+
+
+def main():
+    rospy.init_node("ilidar_viewer")
+    rviz_template = rospy.get_param("~rviz_template")
+    fixed_frame = rospy.get_param("~fixed_frame", "base_link")
+    sensor_sns_text = str(rospy.get_param("~sensor_sns", "")).strip()
+    sensor_sns = (
+        parse_sensor_sns(sensor_sns_text)
+        if sensor_sns_text else discover_sensor_sns()
+    )
+    config = build_rviz_config(rviz_template, sensor_sns, fixed_frame)
+
+    descriptor, temporary_path = tempfile.mkstemp(
+        prefix="ilidar_", suffix=".rviz"
+    )
+    os.close(descriptor)
+    try:
+        with io.open(temporary_path, "w", encoding="utf-8") as temporary:
+            # sort_keys is unavailable in the PyYAML shipped with Xenial.
+            yaml.safe_dump(config, temporary, default_flow_style=False)
+
+        rviz_executable = find_executable("rviz")
+        if rviz_executable is None:
+            raise RuntimeError("rviz executable was not found")
+
+        process = subprocess.Popen([rviz_executable, "-d", temporary_path])
+
+        rospy.on_shutdown(lambda: stop_process(process))
+        while not rospy.is_shutdown() and process.poll() is None:
+            time.sleep(0.1)
+        stop_process(process)
+    finally:
+        if os.path.exists(temporary_path):
+            os.unlink(temporary_path)
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except (KeyError, OSError, RuntimeError, ValueError, yaml.YAMLError) as error:
+        rospy.logfatal("Failed to start iTFS RViz viewer: %s", error)
+        raise SystemExit(1)
