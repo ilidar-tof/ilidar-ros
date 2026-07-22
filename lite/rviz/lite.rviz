@@ -30,15 +30,11 @@ Visualization Manager:
       Position Transformer: XYZ
       Queue Size: 5
       Value: true
-    - Class: rviz/Camera
+    - Class: rviz/Image
       Enabled: true
-      Name: Depth Camera
+      Name: Depth Image
       Image Topic: /ilidar_lite/depth/image_raw
-      Image Rendering: background
-      Overlay Alpha: 0.5
-      Queue Size: 2
       Transport Hint: raw
-      Zoom Factor: 1
       Value: true
     - Class: rviz/Image
       Enabled: true

@@ -2,7 +2,7 @@
 
 ROS 1 C++ packages for the **iTFS** and **iTFS-LITE** product families.
 
-Version: `V2.0.0`
+Version: `V2.0.1`
 
 > [!WARNING]
 > ROS Kinetic, Melodic, and Noetic have reached end of life. These packages are

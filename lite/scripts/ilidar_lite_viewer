@@ -20,7 +20,7 @@ import yaml
 
 SENSOR_TOPIC_SUFFIXES = {
     "LITE Points": ("Topic", "points"),
-    "Depth Camera": ("Image Topic", "depth/image_raw"),
+    "Depth Image": ("Image Topic", "depth/image_raw"),
     "Amplitude Image": ("Image Topic", "amplitude/image_raw"),
     "Intensity Image": ("Image Topic", "intensity/image_raw"),
     "Confidence Image": ("Image Topic", "confidence/image_raw"),

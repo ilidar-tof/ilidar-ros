@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0.2)
-project(ilidar_itfs_ros VERSION 2.0.0)
+project(ilidar_itfs_ros VERSION 2.0.1)
 
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -28,5 +28,5 @@ target_link_libraries(ilidar_core ${catkin_LIBRARIES} Threads::Threads)
 install(TARGETS ilidar_core RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 catkin_install_python(PROGRAMS scripts/ilidar_viewer DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 install(DIRECTORY launch config rviz dat DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
-install(FILES README.md CHANGELOG.md LICENSE
+install(FILES README.md LICENSE
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
