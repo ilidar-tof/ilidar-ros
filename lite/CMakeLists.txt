@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0.2)
-project(ilidar_lite_ros VERSION 2.0.1)
+project(ilidar_lite_ros VERSION 2.0.2)
 
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)

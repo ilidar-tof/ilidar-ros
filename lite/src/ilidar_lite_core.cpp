@@ -3,7 +3,7 @@
  * @brief ROS 1 core node for iTFS-LITE
  * @author Junwoo Son (json@hybo.co)
  * @date 2026-07-13
- * @version V2.0.1
+ * @version V2.0.2
  */
 
 #include <algorithm>
@@ -41,14 +41,7 @@
 #include "ilidar_lite.hpp"
 
 namespace {
-// Keep the range constants identical to lite_pcl_example.cpp so every SDK
-// encoding is reconstructed with the same physical scale.
 constexpr double half_pi = 1.5707963267948966;
-constexpr float depth_q16_max_m = 7.49481145f;
-constexpr float depth_raw_q16_to_m = depth_q16_max_m / 65535.0f;
-constexpr float depth_lin8_to_m = depth_q16_max_m / 255.0f;
-constexpr float xyz_raw_q15_to_m = depth_q16_max_m / 32767.0f;
-constexpr float xyz_lin8_to_m = depth_q16_max_m / 127.0f;
 constexpr uint16_t confidence_raw_valid_threshold = 16;
 constexpr auto output_mode_warning_repeat_period = std::chrono::seconds(5);
 constexpr auto diagnostics_publish_period = std::chrono::seconds(1);
@@ -1446,6 +1439,10 @@ class LiteCoreNode {
     bool restore_depth_mm(const DeviceContext &context,
                           const LiteFrameSnapshot &frame,
                           std::vector<uint8_t> &depth_mm) const {
+        const bool f1 = (frame.lite_img_data.mode & iTFS::lite_capture_mode_freq_mask) ==
+                        (iTFS::lite_capture_mode_freq_f1_single << iTFS::lite_capture_mode_freq_pos);
+        const float depth_raw_q16_to_m = (f1 ? iTFS::depth_f1_max_m : iTFS::depth_f2_max_m) / 65536.0f;
+        const float depth_lin8_to_m = (f1 ? iTFS::depth_f1_max_m : iTFS::depth_f2_max_m) / 256.0f;
         // SDK getters are not const-qualified even though they only resolve a
         // packed slot here; const_cast is limited to these access calls.
         const uint8_t (*depth_image8)[iTFS::lite_max_col] = context.output_layout.depth_8bit ?
@@ -1479,7 +1476,7 @@ class LiteCoreNode {
                            context.output_layout.depth_mode == iTFS::packet::info_v3_data_output_xyz_lin_8bit) {
                     value_mm = static_cast<float>(depth_image8[r][c]) * depth_lin8_to_m * 1000.0f;
                 } else if (context.output_layout.depth_mode == iTFS::packet::info_v3_data_output_depth_log_8bit) {
-                    value_mm = static_cast<float>(iTFS::depth_log8_lut_lite::decode_mm(depth_image8[r][c]));
+                    value_mm = static_cast<float>(iTFS::decode_lite_depth_log8_mm(depth_image8[r][c], frame.lite_img_data.mode));
                 } else {
                     return false;
                 }
@@ -1641,6 +1638,12 @@ class LiteCoreNode {
     void publish_pointcloud(DeviceContext &context,
                             const LiteFrameSnapshot &frame,
                             const sensor_msgs::Image *amplitude_image) {
+        const bool f1 = (frame.lite_img_data.mode & iTFS::lite_capture_mode_freq_mask) ==
+                        (iTFS::lite_capture_mode_freq_f1_single << iTFS::lite_capture_mode_freq_pos);
+        const float depth_raw_q16_to_m = (f1 ? iTFS::depth_f1_max_m : iTFS::depth_f2_max_m) / 65536.0f;
+        const float depth_lin8_to_m = (f1 ? iTFS::depth_f1_max_m : iTFS::depth_f2_max_m) / 256.0f;
+        const float xyz_raw_q15_to_m = (f1 ? iTFS::depth_f1_max_m : iTFS::depth_f2_max_m) / 32768.0f;
+        const float xyz_lin8_to_m = (f1 ? iTFS::depth_f1_max_m : iTFS::depth_f2_max_m) / 128.0f;
         const bool include_amplitude = context.settings.publish_pointcloud_amplitude &&
             context.output_layout.amplitude_mode !=
                 iTFS::packet::info_v3_data_output_stream_off;
@@ -1717,7 +1720,7 @@ class LiteCoreNode {
                     } else if (context.output_layout.depth_mode == iTFS::packet::info_v3_data_output_depth_lin_8bit) {
                         depth_m = static_cast<float>(depth_image8[r][c]) * depth_lin8_to_m;
                     } else if (context.output_layout.depth_mode == iTFS::packet::info_v3_data_output_depth_log_8bit) {
-                        depth_m = static_cast<float>(iTFS::depth_log8_lut_lite::decode_mm(depth_image8[r][c])) * 0.001f;
+                        depth_m = static_cast<float>(iTFS::decode_lite_depth_log8_mm(depth_image8[r][c], frame.lite_img_data.mode)) * 0.001f;
                     }
                     if (depth_m > 0.0f) {
                         // Same axis conversion as lite_pcl_example.cpp.

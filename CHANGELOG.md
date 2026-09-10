@@ -3,6 +3,25 @@
 All notable changes to the iLidar ROS 1 package collection are documented in
 this file.
 
+## [2.0.2] - 2026-09-09
+
+### Added
+
+- Added the `advanced_trim` packet definition; internal `ilidar_lite_pack_ver` and `ilidar_lite_lib_ver` are now 2.0.2.
+- Support for iTFS-LITE firmware V1.2.6 F1 100 MHz Single output, including
+  frequency-aware depth and native XYZ conversion and a dedicated F1 depth
+  LOG8 lookup table.
+
+### Fixed
+
+- Corrected RAW and linear 8-bit distance conversion to use the received
+  frame's frequency mode: 1.499 m for F1 and 7.495 m for F2/Dual, with
+  consistent fixed-point scaling across image and point-cloud outputs.
+- Corrected the distortion model used for iTFS-LITE depth-to-point-cloud
+  reconstruction, improving agreement with native sensor XYZ output.
+- Preserved the organized 320x240 PointCloud2 dimensions and row stride after
+  buffer allocation.
+
 ## [2.0.1] - 2026-07-22
 
 ### Changed

@@ -2,7 +2,7 @@
 
 ROS 1 receive-only bridge for the `iTFS::LiDAR` C++ API.
 
-Version: `V2.0.1`
+Version: `V2.0.2`
 
 ## Compatibility
 
